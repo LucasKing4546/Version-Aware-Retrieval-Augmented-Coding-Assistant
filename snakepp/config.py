@@ -26,6 +26,7 @@ class RetrievalConfig(BaseModel):
 class VersionFilterConfig(BaseModel):
     mode: Literal["off", "soft", "hard"] = "off"
     penalty: float = 0.3  # score multiplier for incompatible chunks in soft mode
+    max_minor_gap: int | None = None  # None: same major is compatible; n: also require |minor diff| <= n
 
 
 class GenerationConfig(BaseModel):

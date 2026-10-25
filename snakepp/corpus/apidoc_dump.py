@@ -64,6 +64,7 @@ def main(out_path: str, root: str, modules: list[str]) -> None:
                 seen.add(qualname)
                 sig = "" if isinstance(obj, property) else _signature(obj)
                 out.write(json.dumps({"qualname": qualname, "signature": sig, "doc": doc}) + "\n")
+    os.replace(tmp_path, out_path)  # only a complete dump gets the final name
 
 
 if __name__ == "__main__":

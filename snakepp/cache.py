@@ -16,9 +16,9 @@ def key(*parts: Any) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
-def cached_json(namespace: str, cache_key: str, compute: Callable[[], Any], root: Path = CACHE_DIR) -> Any:
+def cached_json(namespace: str, cache_key: str, compute: Callable[[], Any], root: Path | None = None) -> Any:
     """Return the cached JSON value for (namespace, key), computing and storing it if missing."""
-    path = root / namespace / f"{cache_key}.json"
+    path = (root or CACHE_DIR) / namespace / f"{cache_key}.json"
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
     value = compute()

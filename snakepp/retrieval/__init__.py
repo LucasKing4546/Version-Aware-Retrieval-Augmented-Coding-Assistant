@@ -1,5 +1,5 @@
-"""Retrieval package — owner: Kevin.
+"""Retrieval package — owner: Kevin. `Retriever.retrieve(query, target_versions)` is the public API."""
 
-TODO (M1 Thu 29 Oct): expose retrieve(query, target_versions, config) -> list[Retrieved]
-combining bm25, dense, fusion.rrf, rerank and version_filter according to RetrievalConfig.
-"""
+from snakepp.retrieval.retriever import Retriever, corpus_files
+
+__all__ = ["Retriever", "corpus_files"]

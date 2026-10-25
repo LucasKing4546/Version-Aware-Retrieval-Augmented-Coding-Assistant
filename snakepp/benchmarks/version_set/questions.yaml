@@ -1,9 +1,269 @@
-# Owner: Roberto. Keep only questions whose tests were actually run under both versions.
-- id: pandas-append-row
+# Version-sensitive questions (pandas 1.5.3 vs 2.2.2). Each question is asked once per version.
+# setup:     shown to the model, run before its answer.     test: run after the answer, must pass.
+# reference: a correct answer per version, used ONLY by `validate` to prove the test passes there; never shown.
+# breaks:    version -> an answer that must FAIL on that version (proves the question is version-sensitive).
+# Keep only questions that `python -m snakepp.benchmarks.version_set.loader validate` reports as valid.
+
+- id: append-row
   library: pandas
-  question: "Add a new row with today's sales (1840) to my DataFrame df."
-  versions:
-    "2.2.2": {expect: pass_with_new_api}
-    "1.5.3": {expect: old_api_still_works}
-  test_2x: |
-    # TODO: pytest test that passes on pandas 2.x
+  question: "Add a new row with day 'wed' and sales 1840 at the end of df. Store the new DataFrame in `result`."
+  setup: |
+    import pandas as pd
+    df = pd.DataFrame({"day": ["mon", "tue"], "sales": [1200, 1500]})
+  test: |
+    assert list(result["day"]) == ["mon", "tue", "wed"]
+    assert list(result["sales"]) == [1200, 1500, 1840]
+    assert list(result.index) == [0, 1, 2]
+  reference:
+    "1.5.3": |
+      result = df.append({"day": "wed", "sales": 1840}, ignore_index=True)
+    "2.2.2": |
+      result = pd.concat([df, pd.DataFrame([{"day": "wed", "sales": 1840}])], ignore_index=True)
+  breaks:
+    "2.2.2": |
+      result = df.append({"day": "wed", "sales": 1840}, ignore_index=True)
+
+- id: series-append
+  library: pandas
+  question: "Join the Series a and b into one Series with a fresh 0..n-1 index. Store it in `result`."
+  setup: |
+    import pandas as pd
+    a = pd.Series([1, 2])
+    b = pd.Series([3])
+  test: |
+    assert result.tolist() == [1, 2, 3] and result.index.tolist() == [0, 1, 2]
+  reference:
+    "1.5.3": |
+      result = a.append(b, ignore_index=True)
+    "2.2.2": |
+      result = pd.concat([a, b], ignore_index=True)
+  breaks:
+    "2.2.2": |
+      result = a.append(b, ignore_index=True)
+
+- id: iterate-columns
+  library: pandas
+  question: "Build a dict mapping each column name of df to the sum of that column by iterating over (name, column) pairs with the DataFrame's column iterator. Store it in `result`."
+  setup: |
+    import pandas as pd
+    df = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
+  test: |
+    assert result == {"a": 3, "b": 30}
+  reference:
+    "1.5.3": |
+      result = {name: col.sum() for name, col in df.iteritems()}
+    "2.2.2": |
+      result = {name: col.sum() for name, col in df.items()}
+  breaks:
+    "2.2.2": |
+      result = {name: col.sum() for name, col in df.iteritems()}
+
+- id: elementwise-map
+  library: pandas
+  question: "Apply a function elementwise to every cell of df, turning each number x into the string f'{x:.1f}', using the DataFrame's elementwise method. Store the new DataFrame in `result`."
+  setup: |
+    import pandas as pd
+    df = pd.DataFrame({"a": [1.25, 2.0], "b": [3.5, 4.75]})
+  test: |
+    assert result.values.tolist() == [["1.2", "3.5"], ["2.0", "4.8"]]
+  reference:
+    "1.5.3": |
+      result = df.applymap(lambda x: f"{x:.1f}")
+    "2.2.2": |
+      result = df.map(lambda x: f"{x:.1f}")
+  breaks:
+    "1.5.3": |
+      result = df.map(lambda x: f"{x:.1f}")
+
+- id: groupby-mean-mixed
+  library: pandas
+  question: "df has a text column 'name'. Compute the mean of every numeric column per 'team' (a DataFrame indexed by team). Store it in `result`."
+  setup: |
+    import pandas as pd
+    df = pd.DataFrame({"team": ["x", "x", "y"], "name": ["ann", "bob", "cy"], "pts": [10, 20, 30], "ast": [1, 3, 5]})
+  test: |
+    assert sorted(result.columns) == ["ast", "pts"]
+    assert result.loc["x", "pts"] == 15 and result.loc["y", "ast"] == 5
+  reference:
+    "1.5.3": |
+      result = df.groupby("team").mean()
+    "2.2.2": |
+      result = df.groupby("team").mean(numeric_only=True)
+  breaks:
+    "2.2.2": |
+      result = df.groupby("team").mean()
+
+- id: median-mixed
+  library: pandas
+  question: "df has a text column. Compute the median of each numeric column as a Series. Store it in `result`."
+  setup: |
+    import pandas as pd
+    df = pd.DataFrame({"city": ["a", "b", "c"], "temp": [10, 30, 20], "rain": [1.0, 0.0, 3.0]})
+  test: |
+    assert result.to_dict() == {"temp": 20.0, "rain": 1.0}
+  reference:
+    "1.5.3": |
+      result = df.median()
+    "2.2.2": |
+      result = df.median(numeric_only=True)
+  breaks:
+    "2.2.2": |
+      result = df.median()
+
+- id: to-datetime-mixed
+  library: pandas
+  question: "The strings in s use different date formats. Parse each one as a date (day-first is not used). Store the parsed Series in `result`."
+  setup: |
+    import pandas as pd
+    s = pd.Series(["2024-01-05", "March 3, 2024", "2024/02/10"])
+  test: |
+    assert [d.strftime("%Y-%m-%d") for d in result] == ["2024-01-05", "2024-03-03", "2024-02-10"]
+  reference:
+    "1.5.3": |
+      result = pd.to_datetime(s)
+    "2.2.2": |
+      result = pd.to_datetime(s, format="mixed")
+  breaks:
+    "2.2.2": |
+      result = pd.to_datetime(s)
+    "1.5.3": |
+      result = pd.to_datetime(s, format="mixed")
+
+- id: value-counts-frame
+  library: pandas
+  question: "Count how often each fruit occurs and return a DataFrame with exactly the columns ['fruit', 'count'], most frequent first, using value_counts and reset_index. Store it in `result`."
+  setup: |
+    import pandas as pd
+    s = pd.Series(["apple", "pear", "apple", "fig", "apple", "pear"], name="fruit")
+  test: |
+    assert list(result.columns) == ["fruit", "count"]
+    assert result.iloc[0].tolist() == ["apple", 3]
+  reference:
+    "1.5.3": |
+      result = s.value_counts().reset_index()
+      result.columns = ["fruit", "count"]
+    "2.2.2": |
+      result = s.value_counts().reset_index()
+  breaks:
+    "1.5.3": |
+      result = s.value_counts().reset_index()
+
+- id: pivot-positional
+  library: pandas
+  question: "Reshape df so that 'date' is the index, each 'city' is a column and the cells hold 'temp', using DataFrame.pivot. Store it in `result`."
+  setup: |
+    import pandas as pd
+    df = pd.DataFrame({"date": [1, 1, 2, 2], "city": ["a", "b", "a", "b"], "temp": [5, 7, 6, 8]})
+  test: |
+    assert result.loc[2, "b"] == 8 and list(result.columns) == ["a", "b"]
+  reference:
+    "1.5.3": |
+      result = df.pivot("date", "city", "temp")
+    "2.2.2": |
+      result = df.pivot(index="date", columns="city", values="temp")
+  breaks:
+    "2.2.2": |
+      result = df.pivot("date", "city", "temp")
+
+- id: mean-absolute-deviation
+  library: pandas
+  question: "Compute the mean absolute deviation of s around its mean (a float). Store it in `result`."
+  setup: |
+    import pandas as pd
+    s = pd.Series([1.0, 2.0, 3.0, 6.0])
+  test: |
+    assert abs(result - 1.5) < 1e-9
+  reference:
+    "1.5.3": |
+      result = s.mad()
+    "2.2.2": |
+      result = (s - s.mean()).abs().mean()
+  breaks:
+    "2.2.2": |
+      result = s.mad()
+
+- id: sum-by-level
+  library: pandas
+  question: "s has a two-level MultiIndex (region, store). Sum the values per region (first index level). Store the Series in `result`."
+  setup: |
+    import pandas as pd
+    idx = pd.MultiIndex.from_tuples([("n", 1), ("n", 2), ("s", 1)], names=["region", "store"])
+    s = pd.Series([5, 7, 3], index=idx)
+  test: |
+    assert result.to_dict() == {"n": 12, "s": 3}
+  reference:
+    "1.5.3": |
+      result = s.sum(level=0)
+    "2.2.2": |
+      result = s.groupby(level=0).sum()
+  breaks:
+    "2.2.2": |
+      result = s.sum(level=0)
+
+- id: lookup-per-row
+  library: pandas
+  question: "For each row of df, pick the value from the column whose name is stored in the 'which' column. Store the picked values as a list in `result`."
+  setup: |
+    import pandas as pd
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [10, 20, 30], "which": ["a", "b", "a"]})
+  test: |
+    assert list(result) == [1, 20, 3]
+  reference:
+    "1.5.3": |
+      result = list(df.lookup(df.index, df["which"]))
+    "2.2.2": |
+      result = [df.at[i, c] for i, c in zip(df.index, df["which"])]
+  breaks:
+    "2.2.2": |
+      result = list(df.lookup(df.index, df["which"]))
+
+- id: str-replace-digits
+  library: pandas
+  question: "Remove every digit from the strings in s using the Series string accessor and the pattern r'\\d'. Store the new Series in `result`."
+  setup: |
+    import pandas as pd
+    s = pd.Series(["a1b2", "c33", "d"])
+  test: |
+    assert result.tolist() == ["ab", "c", "d"]
+  reference:
+    "1.5.3": |
+      result = s.str.replace(r"\d", "")
+    "2.2.2": |
+      result = s.str.replace(r"\d", "", regex=True)
+  breaks:
+    "2.2.2": |
+      result = s.str.replace(r"\d", "")
+
+- id: index-is-monotonic
+  library: pandas
+  question: "Check whether the index of df is sorted in increasing order, using the index's monotonic property. Store the bool in `result`."
+  setup: |
+    import pandas as pd
+    df = pd.DataFrame({"v": [1, 2, 3]}, index=[3, 5, 9])
+  test: |
+    assert result is True or result == True  # noqa: E712
+  reference:
+    "1.5.3": |
+      result = bool(df.index.is_monotonic)
+    "2.2.2": |
+      result = bool(df.index.is_monotonic_increasing)
+  breaks:
+    "2.2.2": |
+      result = bool(df.index.is_monotonic)
+
+- id: between-inclusive
+  library: pandas
+  question: "Keep the rows of df whose 'v' lies between 2 and 5, both ends included, using Series.between with its inclusive argument. Store the filtered DataFrame in `result`."
+  setup: |
+    import pandas as pd
+    df = pd.DataFrame({"v": [1, 2, 4, 5, 6]})
+  test: |
+    assert result["v"].tolist() == [2, 4, 5]
+  reference:
+    "1.5.3": |
+      result = df[df["v"].between(2, 5, inclusive="both")]
+    "2.2.2": |
+      result = df[df["v"].between(2, 5, inclusive="both")]
+  breaks:
+    "2.2.2": |
+      result = df[df["v"].between(2, 5, inclusive=True)]

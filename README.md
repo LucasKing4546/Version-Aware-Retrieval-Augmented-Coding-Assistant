@@ -17,6 +17,15 @@ pytest -q && ruff check .
 
 Optional heavy extras: `pip install -e ".[retrieval]"` (sentence-transformers, FAISS) and `pip install -e ".[gen]"` (LLM clients).
 
+## Smoke test
+
+```bash
+python scripts/smoke_test.py            # pytest, ruff and a functional check of every finished piece
+python scripts/smoke_test.py --github   # also checks the issue board and the last CI run on main
+```
+
+Prints PASS / FAIL / SKIP per check. SKIP means that piece is not on the current branch yet.
+
 ## Layout
 
 | Path | Owner | Purpose |

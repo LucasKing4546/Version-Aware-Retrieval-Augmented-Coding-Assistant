@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# data and models never go in git
+data/*
+!data/.gitkeep
+*.faiss
+*.npy
+*.parquet
+*.pkl
+models/

@@ -1,0 +1,4 @@
+name: c5_leaky
+description: "Full system on the leaky SO index (contamination check)"
+retrieval:
+  so_index: leaky

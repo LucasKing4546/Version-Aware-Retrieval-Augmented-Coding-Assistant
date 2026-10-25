@@ -1,0 +1,4 @@
+name: c2_so
+description: "Hybrid + rerank, Stack Overflow only (clean)"
+retrieval:
+  sources: [stackoverflow]

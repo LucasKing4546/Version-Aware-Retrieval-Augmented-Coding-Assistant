@@ -1,0 +1,9 @@
+# Owner: Roberto. Keep only questions whose tests were actually run under both versions.
+- id: pandas-append-row
+  library: pandas
+  question: "Add a new row with today's sales (1840) to my DataFrame df."
+  versions:
+    "2.2.2": {expect: pass_with_new_api}
+    "1.5.3": {expect: old_api_still_works}
+  test_2x: |
+    # TODO: pytest test that passes on pandas 2.x

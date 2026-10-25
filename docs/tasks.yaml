@@ -1,0 +1,41 @@
+# Every task from the work plan. scripts/create_issues.py turns these into GitHub issues.
+# owner: lucas | kevin | enea | roberto | all      milestone: M0..M5
+- {title: "Repo, CI, CLAUDE.md, schemas, issue board", owner: kevin, due: 2026-10-26, milestone: M0, area: infra}
+- {title: "Start Stack Overflow data dump download; check watermark list", owner: lucas, due: 2026-10-26, milestone: M0, area: data}
+- {title: "Find DS-1000 pinned library versions and post them", owner: enea, due: 2026-10-26, milestone: M0, area: eval}
+- {title: "Choose generator (vLLM 7B vs API) and time one DS-1000 problem", owner: enea, due: 2026-10-26, milestone: M0, area: gen}
+- {title: "Claude Project with RFC, plan, papers; related-work outline", owner: roberto, due: 2026-10-26, milestone: M0, area: report}
+- {title: "Team freezes snakepp/schemas.py", owner: all, due: 2026-10-26, milestone: M0, area: infra}
+- {title: "Stub chunk fixture (200 chunks) for retrieval tests", owner: kevin, due: 2026-10-27, milestone: M1, area: retrieval}
+- {title: "Docs parser: Sphinx .rst -> Chunk parquet (pandas, two versions)", owner: lucas, due: 2026-10-27, milestone: M1, area: data}
+- {title: "Stack Overflow streaming parser; first 20k posts", owner: lucas, due: 2026-10-28, milestone: M1, area: data}
+- {title: "SO version inference from PyPI release dates", owner: lucas, due: 2026-10-28, milestone: M1, area: data}
+- {title: "BM25 with identifier-aware tokenizer", owner: kevin, due: 2026-10-28, milestone: M1, area: retrieval}
+- {title: "Docker sandbox with DS-1000 pinned versions", owner: enea, due: 2026-10-28, milestone: M1, area: eval}
+- {title: "Dense retrieval (sentence-transformers + FAISS) and retrieve() API", owner: kevin, due: 2026-10-29, milestone: M1, area: retrieval}
+- {title: "DS-1000 harness (5 libraries) + no-retrieval baseline pass@1", owner: enea, due: 2026-10-29, milestone: M1, area: eval}
+- {title: "Version-sensitive set: first 15 pandas 1.x/2.x questions with tests", owner: roberto, due: 2026-10-30, milestone: M2, area: bench}
+- {title: "Docs for NumPy, Matplotlib, scikit-learn, SciPy, stdlib (+HF)", owner: lucas, due: 2026-10-31, milestone: M2, area: data}
+- {title: "Prompt templates and citation parser", owner: enea, due: 2026-11-01, milestone: M2, area: gen}
+- {title: "Reciprocal rank fusion + pipeline wiring + YAML configs", owner: kevin, due: 2026-11-01, milestone: M2, area: retrieval}
+- {title: "M2 end-to-end run on pandas slice", owner: all, due: 2026-11-01, milestone: M2, area: infra}
+- {title: "Full Stack Overflow subset (50k-200k posts)", owner: lucas, due: 2026-11-03, milestone: M3, area: data}
+- {title: "Cross-encoder reranker", owner: kevin, due: 2026-11-03, milestone: M3, area: retrieval}
+- {title: "HumanEval and MBPP runners", owner: enea, due: 2026-11-03, milestone: M3, area: eval}
+- {title: "Decontamination (MinHash + embeddings), leaky and clean indexes", owner: lucas, due: 2026-11-04, milestone: M3, area: data}
+- {title: "Version-sensitive set complete (30-50 questions, incl. HF)", owner: roberto, due: 2026-11-04, milestone: M3, area: bench}
+- {title: "Version filter (hard/soft) + version detection", owner: kevin, due: 2026-11-05, milestone: M3, area: retrieval}
+- {title: "SO attribution columns filled", owner: lucas, due: 2026-11-08, milestone: M3, area: data}
+- {title: "Retrieval metrics (recall@k, MRR) and tuning on dev split", owner: kevin, due: 2026-11-08, milestone: M3, area: retrieval}
+- {title: "Batch runner; all configs run once (M3 results table)", owner: enea, due: 2026-11-08, milestone: M3, area: eval}
+- {title: "Analysis notebook skeleton with bootstrap CIs", owner: roberto, due: 2026-11-08, milestone: M3, area: analysis}
+- {title: "Sandbox images for pandas 1.x and 2.x / HF versions", owner: enea, due: 2026-11-11, milestone: M4, area: eval}
+- {title: "Gradio demo + 2-minute video", owner: roberto, due: 2026-11-11, milestone: M4, area: demo}
+- {title: "Freeze code and configs; tag pre-final", owner: kevin, due: 2026-11-14, milestone: M4, area: infra}
+- {title: "Final runs on clean index + citation accuracy", owner: enea, due: 2026-11-14, milestone: M4, area: eval}
+- {title: "Failure analysis (50 cases) and final figures", owner: roberto, due: 2026-11-15, milestone: M4, area: analysis}
+- {title: "Report sections: data, versions, decontamination", owner: lucas, due: 2026-11-16, milestone: M5, area: report}
+- {title: "Report sections: retrieval, limitations, AI-use statement", owner: kevin, due: 2026-11-18, milestone: M5, area: report}
+- {title: "Report sections: evaluation setup and metrics", owner: enea, due: 2026-11-16, milestone: M5, area: report}
+- {title: "Report assembly, results, slides", owner: roberto, due: 2026-11-20, milestone: M5, area: report}
+- {title: "Final proofread, v1.0 tag, reproduction README", owner: all, due: 2026-11-22, milestone: M5, area: infra}

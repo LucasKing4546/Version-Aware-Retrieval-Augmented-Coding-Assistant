@@ -33,6 +33,8 @@ class GenerationConfig(BaseModel):
     model: str = "Qwen/Qwen2.5-Coder-7B-Instruct"
     temperature: float = 0.0
     max_tokens: int = 1024
+    context_chars: int = 1500  # each retrieved chunk is cut to this many characters in the prompt
+    mention_versions: bool = True  # tell the model the target library versions (all configs, for fairness)
 
 
 class Config(BaseModel):

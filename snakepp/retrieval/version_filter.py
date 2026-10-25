@@ -53,8 +53,11 @@ def apply(
 
 LIBRARIES = ("pandas", "numpy", "matplotlib", "scikit-learn", "scipy")
 _ALIASES = {"sklearn": "scikit-learn", "np": "numpy", "pd": "pandas"}
+_LIB = r"\b(pandas|numpy|matplotlib|scikit-learn|sklearn|scipy)\b"
+# 'pandas 1.5', 'pandas==2.2.2', 'numpy version 2', 'sklearn v1.4' -- but not 'pandas 4 columns'
 _MENTION = re.compile(
-    r"\b(pandas|numpy|matplotlib|scikit-learn|sklearn|scipy)\b\s*(?:==|>=|version|v)?\s*(\d+(?:\.\d+){0,2})\b",
+    _LIB + r"\s*(?:(?:==|>=|<=|~=)\s*|version\s+|v)(\d+(?:\.\d+){0,2})\b|"
+    + _LIB + r"\s+(\d+\.\d+(?:\.\d+)?)\b",
     re.IGNORECASE,
 )
 
@@ -62,8 +65,10 @@ _MENTION = re.compile(
 def versions_in_text(text: str) -> dict[str, str]:
     """Library versions named in free text, e.g. 'I am on pandas 1.5' -> {'pandas': '1.5'}."""
     found: dict[str, str] = {}
-    for lib, version in _MENTION.findall(text):
-        found.setdefault(_ALIASES.get(lib.lower(), lib.lower()), version)
+    for lib_a, ver_a, lib_b, ver_b in _MENTION.findall(text):
+        lib, version = (lib_a, ver_a) if lib_a else (lib_b, ver_b)
+        if int(version.split(".")[0]) < 10:  # our libraries never reached major 10
+            found.setdefault(_ALIASES.get(lib.lower(), lib.lower()), version)
     return found
 
 

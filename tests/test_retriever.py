@@ -100,3 +100,8 @@ def test_minor_gap(chunks_200):
     assert compatible(old_mpl, {"matplotlib": "3.9.0"})
     assert not compatible(old_mpl, {"matplotlib": "3.9.0"}, max_minor_gap=1)
     assert compatible(old_mpl, {"matplotlib": "3.8.4"}, max_minor_gap=1)
+
+
+def test_versions_in_text_ignores_counts():
+    assert versions_in_text("a pandas 4 columns frame with numpy 153 rows") == {}
+    assert versions_in_text("numpy v1.21 and scipy>=1.9") == {"numpy": "1.21", "scipy": "1.9"}

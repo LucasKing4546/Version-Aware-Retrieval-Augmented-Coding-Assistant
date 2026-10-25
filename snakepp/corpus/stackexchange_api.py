@@ -123,12 +123,14 @@ def build(per_library: int = 2000, min_score: int = 3, out: Path = CHUNKS_DIR / 
     """Write so_all.parquet (then run decontam). ~2 * per_library / 100 requests per library."""
     from snakepp.corpus.versions import infer_version
 
-    chunks = []
+    chunks: dict[str, object] = {}  # a post tagged with two libraries is kept once, under the first
     for library in TAGS:
         before = len(chunks)
-        chunks += [make_chunk(q, a, library, infer_version) for q, a in iter_pairs(library, per_library, min_score)]
-        typer.echo(f"{library}: {len(chunks) - before} Q&A pairs")
-    typer.echo(f"{out}: {write_chunks(chunks, out)} chunks")
+        for q, a in iter_pairs(library, per_library, min_score):
+            chunk = make_chunk(q, a, library, infer_version)
+            chunks.setdefault(chunk.id, chunk)
+        typer.echo(f"{library}: {len(chunks) - before} new Q&A pairs")
+    typer.echo(f"{out}: {write_chunks(chunks.values(), out)} chunks")
 
 
 if __name__ == "__main__":

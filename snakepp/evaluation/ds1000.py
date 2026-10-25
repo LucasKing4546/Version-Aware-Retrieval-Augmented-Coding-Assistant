@@ -3,14 +3,20 @@
 Loads the official release (xlang-ai/DS-1000, data/ds1000.jsonl.gz), keeps Pandas, Numpy, Matplotlib, Sklearn
 and Scipy, and builds Task objects. Reference solutions are dropped at load time and never stored or shown.
 Evaluation follows the official script: code_context + `test_execution(code)` (+ `test_string(code)`).
+Splits: `dev` is a fixed 10% of each library's problem groups (a problem and all its perturbations stay together),
+used for tuning only; `test` is the rest and is what we report; `all` is everything.
 """
 
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
+import math
 import urllib.request
+from collections import defaultdict
 from pathlib import Path
+from typing import Literal
 
 from snakepp.evaluation.sandbox.runner import run_many
 from snakepp.schemas import EvalResult, Task
@@ -31,6 +37,8 @@ INSTRUCTION = (
     "Write only the missing code that goes after BEGIN SOLUTION, so that the program above runs correctly. "
     "Do not repeat the given code."
 )
+DEV_FRACTION = 0.10
+SPLIT_SEED = "snakepp-ds1000-dev-v1"  # changing it changes the dev split: never do so after tuning has started
 _MARKERS = ("<code>", "</code>", "BEGIN SOLUTION", "END SOLUTION", "```python", "```")
 
 
@@ -65,26 +73,42 @@ def clean_code(code: str) -> str:
     return code.strip("\n")
 
 
+def dev_groups(metas: list[dict], fraction: float = DEV_FRACTION) -> set[tuple[str, int]]:
+    """(library, origin id) groups in the dev split: the first `fraction` of each library's groups by a seeded hash."""
+    groups: dict[str, set[int]] = defaultdict(set)
+    for m in metas:
+        groups[m["library"]].add(m["perturbation_origin_id"])
+    dev = set()
+    for library, ids in groups.items():
+        ranked = sorted(ids, key=lambda i: hashlib.sha1(f"{SPLIT_SEED}:{library}:{i}".encode()).hexdigest())
+        dev |= {(library, i) for i in ranked[: math.ceil(fraction * len(ranked))]}
+    return dev
+
+
 class DS1000:
     """Tasks plus the hidden test code needed to score them."""
 
-    def __init__(self, path: Path = DATA_PATH, libraries: list[str] | None = None, limit: int | None = None) -> None:
+    def __init__(self, path: Path = DATA_PATH, libraries: list[str] | None = None, limit: int | None = None,
+                 split: Literal["test", "dev", "all"] = "test") -> None:
         keep = set(libraries or LIBRARIES)
         self.tasks: list[Task] = []
         self._contexts: dict[str, str] = {}
         with gzip.open(download(path), "rt", encoding="utf-8") as f:
-            for line in f:
-                row = json.loads(line)
-                row.pop("reference_code", None)  # never keep reference solutions
-                meta = row["metadata"]
-                if meta["library"] not in keep:
-                    continue
-                task_id = f"ds1000/{meta['problem_id']}"
-                self._contexts[task_id] = row["code_context"]
-                self.tasks.append(Task(
-                    task_id=task_id, benchmark="ds1000", prompt=f"{row['prompt'].rstrip()}\n\n{INSTRUCTION}",
-                    library=LIBRARIES[meta["library"]], target_versions=target_versions(meta["library"]),
-                ))
+            rows = [json.loads(line) for line in f]
+        for row in rows:
+            row.pop("reference_code", None)  # never keep reference solutions
+        dev = dev_groups([r["metadata"] for r in rows if r["metadata"]["library"] in keep])
+        for row in rows:
+            meta = row["metadata"]
+            in_dev = (meta["library"], meta["perturbation_origin_id"]) in dev
+            if meta["library"] not in keep or (split == "dev" and not in_dev) or (split == "test" and in_dev):
+                continue
+            task_id = f"ds1000/{meta['problem_id']}"
+            self._contexts[task_id] = row["code_context"]
+            self.tasks.append(Task(
+                task_id=task_id, benchmark="ds1000", prompt=f"{row['prompt'].rstrip()}\n\n{INSTRUCTION}",
+                library=LIBRARIES[meta["library"]], target_versions=target_versions(meta["library"]),
+            ))
         if limit is not None:
             self.tasks = self.tasks[:limit]
 

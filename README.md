@@ -15,7 +15,26 @@ cp .env.example .env        # add API keys here, never commit .env
 pytest -q && ruff check .
 ```
 
-Optional heavy extras: `pip install -e ".[retrieval]"` (sentence-transformers, FAISS) and `pip install -e ".[gen]"` (LLM clients).
+Full install (retrieval models, LLM clients, demo, analysis):
+`pip install -e ".[dev,retrieval,gen,demo,analysis]"`. On a CPU-only machine install torch first with
+`pip install torch --index-url https://download.pytorch.org/whl/cpu`.
+
+## Build the data (all under `data/`, git-ignored)
+
+```bash
+python scripts/make_sandbox_env.py                    # Python 3.10 + DS-1000 pinned versions (no Docker needed)
+python -m snakepp.corpus.docs build-all               # docs chunks: 6 libraries x their versions (~53k chunks)
+python scripts/download_so_dump.py                    # Stack Overflow dump (69 GB), then extract Posts.xml
+python -m snakepp.corpus.stackoverflow build data/raw/stackoverflow/Posts.xml --limit 50000
+python -m snakepp.corpus.decontam run                 # so_clean.parquet + so_leaky.parquet
+python -m snakepp.benchmarks.version_set.loader validate   # proves every version-set test
+```
+
+## LLM
+
+Free, open models only: set `VLLM_BASE_URL` in `.env` to any OpenAI-compatible server — vLLM on Kaggle/Colab
+(`Qwen/Qwen2.5-Coder-7B-Instruct`, the config default) or LM Studio locally (`http://localhost:1234/v1`, then pass
+`--model <name shown in LM Studio>`). Every call is cached in `data/cache/llm`.
 
 ## Smoke test
 
@@ -44,9 +63,15 @@ Prints PASS / FAIL / SKIP per check. SKIP means that piece is not on the current
 ## Running experiments
 
 ```bash
-python -m snakepp.pipeline run --config configs/c5_full.yaml --benchmark ds1000 --limit 50
-python -m snakepp.pipeline sweep --configs "configs/*.yaml" --benchmarks ds1000 humaneval mbpp version_set
+python -m snakepp.pipeline run configs/c5_full.yaml --benchmark ds1000 --limit 50
+python -m snakepp.pipeline sweep --benchmarks ds1000 --benchmarks humaneval --benchmarks mbpp --benchmarks version_set
+python analysis/make_tables.py                        # pass@1 + CI, paired test vs c0_none, error types
+python demo/app.py --model meta-llama-3.1-8b-instruct # Gradio demo on http://localhost:7860
 ```
+
+Benchmarks: `ds1000` (887 problems, 5 libraries), `humaneval` (164), `mbpp` (257, test split 11-510), `version_set`
+(15 pandas questions x 2 versions). Results: `data/results/<benchmark>/<config>_<date>[_n].{json,jsonl}`, never
+overwritten.
 
 ## Plan
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Full experiment run on a free Kaggle notebook (GPU T4 x2, internet on). Paste into a cell as:  !bash kaggle_run.sh
 # 1. serves Qwen2.5-Coder-7B (AWQ, fits a T4) with vLLM under the config's model name,
-# 2. builds the sandbox env and the docs corpus (or reuses data/ from an attached Kaggle dataset),
+# 2. reuses data/chunks from an attached Kaggle dataset named "snakepp-data" (upload your local data/chunks folder:
+#    docs + so_clean/so_leaky), otherwise builds the docs corpus; builds the sandbox env,
 # 3. runs every config on every benchmark. Re-running resumes: LLM calls and sandbox runs are cached in data/cache.
 # Copy data/results (and data/cache to save GPU time next session) to /kaggle/working before the session ends.
 set -euo pipefail
@@ -25,6 +26,7 @@ export VLLM_BASE_URL=http://localhost:8000/v1
 until curl -sf "$VLLM_BASE_URL/models" > /dev/null; do sleep 10; done
 echo "vLLM is up"
 
+if [ -d /kaggle/input/snakepp-data/chunks ]; then mkdir -p data && cp -rn /kaggle/input/snakepp-data/chunks data/; fi
 [ -x data/envs/ds1000/bin/python ] || python scripts/make_sandbox_env.py
 ls data/chunks/docs_*.parquet > /dev/null 2>&1 || python -m snakepp.corpus.docs build-all
 

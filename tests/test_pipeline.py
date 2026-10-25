@@ -59,3 +59,14 @@ def test_run_benchmark_parallel_generation(monkeypatch, tmp_path):
     cfg = Config.model_validate({"name": "c0", "retrieval": {"enabled": False}})
     gens, _, summary = pipeline.run_benchmark(cfg, FakeBench(), "fake", gen_workers=3)
     assert [g.task_id for g in gens] == ["t0", "t1", "t2"] and summary["pass@1"] == 1.0
+
+
+def test_apply_sets():
+    import pytest
+    import typer
+
+    cfg = Config.model_validate({"name": "c5"})
+    out = pipeline.apply_sets(cfg, ["retrieval.top_k=5", "version_filter.mode=soft"])
+    assert out.retrieval.top_k == 5 and out.version_filter.mode == "soft" and out.name == "c5+top_k=5+mode=soft"
+    with pytest.raises(typer.BadParameter):
+        pipeline.apply_sets(cfg, ["retrieval.nope=1"])

@@ -16,6 +16,7 @@ from datetime import date
 from pathlib import Path
 
 import typer
+import yaml
 from tqdm import tqdm
 
 from snakepp import cache
@@ -101,18 +102,37 @@ def run_benchmark(
     return gens, results, summarize(cfg, name, gens, results)
 
 
-def _with_overrides(cfg: Config, model: str | None, backend: str | None) -> Config:
+def apply_sets(cfg: Config, sets: list[str]) -> Config:
+    """'retrieval.top_k=5' style overrides for tuning; the config name records them (c5_full+top_k=5)."""
+    if not sets:
+        return cfg
+    data = cfg.model_dump()
+    for item in sets:
+        dotted, value = item.split("=", 1)
+        *parents, leaf = dotted.split(".")
+        target = data
+        for key in parents:
+            target = target[key]
+        if leaf not in target:
+            raise typer.BadParameter(f"unknown config field {dotted!r}")
+        target[leaf] = yaml.safe_load(value)
+    data["name"] = cfg.name + "".join(f"+{s.split('.')[-1]}" for s in sets)
+    return Config.model_validate(data)
+
+
+def _with_overrides(cfg: Config, model: str | None, backend: str | None, sets: list[str] | None = None) -> Config:
     gen = cfg.generation.model_copy(update={k: v for k, v in {"model": model, "backend": backend}.items() if v})
-    return cfg.model_copy(update={"generation": gen})
+    return apply_sets(cfg.model_copy(update={"generation": gen}), sets or [])
 
 
 @app.command()
 def run(
     config: str, benchmark: str = "ds1000", limit: int | None = None, model: str | None = None,
-    backend: str | None = None, workers: int = 4, gen_workers: int = 1,
+    backend: str | None = None, workers: int = 4, gen_workers: int = 1, set: list[str] | None = None,  # noqa: A002
 ) -> None:
-    """Run one configuration on one benchmark. --model/--backend override the config (e.g. for LM Studio)."""
-    cfg = _with_overrides(load_config(config), model, backend)
+    """Run one configuration on one benchmark. --model/--backend override the config (e.g. for LM Studio);
+    --set retrieval.top_k=5 overrides any field (tune only on ds1000_dev / mbpp_dev)."""
+    cfg = _with_overrides(load_config(config), model, backend, set)
     gens, results, summary = run_benchmark(cfg, load_benchmark(benchmark, limit), benchmark, workers, gen_workers)
     stem = result_stem(benchmark, cfg.name)
     write_results(stem, gens, results, summary)

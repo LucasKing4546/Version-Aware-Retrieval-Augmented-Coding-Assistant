@@ -87,7 +87,8 @@ def test_corpus_files(tmp_path, chunks_200):
     write_chunks(chunks_200[:5], tmp_path / "docs_pandas_2.2.2.parquet")
     write_chunks(chunks_200[-5:], tmp_path / "so_clean.parquet")
     assert [p.name for p in corpus_files(_cfg(), tmp_path)] == ["docs_pandas_2.2.2.parquet", "so_clean.parquet"]
-    assert [p.name for p in corpus_files(_cfg(so_index="leaky"), tmp_path)] == ["docs_pandas_2.2.2.parquet"]
+    with pytest.raises(FileNotFoundError, match="so_leaky"):
+        corpus_files(_cfg(so_index="leaky"), tmp_path)
     with pytest.raises(ValueError):
         Retriever(_cfg(sources=["docs"]), [c for c in chunks_200 if c.source == "stackoverflow"])
 

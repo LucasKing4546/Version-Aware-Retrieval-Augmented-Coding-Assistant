@@ -132,7 +132,10 @@ def sweep(
             if not force and list((RESULTS_DIR / bench).glob(f"{cfg.name}_[0-9]*.json")):
                 typer.echo(f"skip {cfg.name} on {bench}: results exist")
                 continue
-            run(path, bench, limit, model, backend, gen_workers=gen_workers)
+            try:
+                run(path, bench, limit, model, backend, gen_workers=gen_workers)
+            except FileNotFoundError as e:  # e.g. Stack Overflow corpus not built yet
+                typer.echo(f"skip {cfg.name} on {bench}: {e}")
 
 
 if __name__ == "__main__":

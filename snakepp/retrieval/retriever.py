@@ -22,7 +22,9 @@ def corpus_files(cfg: Config, root: Path = CHUNKS_DIR) -> list[Path]:
         files += sorted(root.glob("docs_*.parquet"))
     if "stackoverflow" in cfg.retrieval.sources:
         so = root / f"so_{cfg.retrieval.so_index}.parquet"
-        files += [so] if so.exists() else []
+        if not so.exists():  # never fall back to docs-only silently: results would be mislabelled
+            raise FileNotFoundError(f"{so} missing: build the Stack Overflow corpus first (see README)")
+        files.append(so)
     return files
 
 

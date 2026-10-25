@@ -161,6 +161,53 @@ def check_download_resume() -> str:
     return "interrupted 1 MiB download resumed from byte 300000 and matches"
 
 
+def check_bm25() -> str:
+    bm25 = importlib.import_module("snakepp.retrieval.bm25")
+    chunks = _load_chunks()
+    by_id = {c.id: c for c in chunks}
+    hits = bm25.BM25Index(chunks).search("DataFrame.append rows", k=3)
+    assert hits and "DataFrame.append" in by_id[hits[0].chunk_id].title
+    return f"top hit for 'DataFrame.append rows': {by_id[hits[0].chunk_id].title}"
+
+
+def check_docs_corpus() -> str:
+    files = sorted((ROOT / "data" / "chunks").glob("docs_*.parquet"))
+    if not files:
+        raise Skip("no data/chunks/docs_*.parquet: run python -m snakepp.corpus.docs build-all")
+    import pyarrow.parquet as pq
+
+    total = sum(pq.read_metadata(f).num_rows for f in files)
+    return f"{len(files)} docs files, {total} chunks"
+
+
+def check_sandbox_env() -> str:
+    from snakepp.evaluation.sandbox import runner
+
+    try:
+        python = runner.sandbox_python()
+    except RuntimeError as e:
+        raise Skip(str(e)) from None
+    out = _run(python, "-c", "import sys, pandas, numpy; print(sys.version.split()[0], pandas.__version__, "
+                              "numpy.__version__)")
+    assert out.split()[1] == "1.5.3", out
+    return f"python {out.split()[0]}, pandas {out.split()[1]}, numpy {out.split()[2]}"
+
+
+def check_llm_endpoint() -> str:
+    import os
+    import urllib.request
+
+    from dotenv import load_dotenv
+
+    load_dotenv(ROOT / ".env")
+    base = os.environ.get("VLLM_BASE_URL")
+    if not base:
+        raise Skip("VLLM_BASE_URL not set (.env)")
+    with urllib.request.urlopen(base.rstrip("/") + "/models", timeout=5) as resp:
+        models = [m["id"] for m in json.load(resp)["data"]]
+    return f"{base}: {len(models)} models, e.g. {models[0]}"
+
+
 def check_related_work() -> str:
     text = _need("report/related_work.md").read_text(encoding="utf-8")
     sections = [line for line in text.splitlines() if line.startswith("## ")]
@@ -207,6 +254,10 @@ def main(github: bool = False, fast: bool = False) -> None:
         ("SO watermark filter", check_watermark_filter),
         ("SO download resume", check_download_resume),
         ("related-work outline", check_related_work),
+        ("BM25 on fixture", check_bm25),
+        ("docs corpus built", check_docs_corpus),
+        ("DS-1000 sandbox env", check_sandbox_env),
+        ("LLM endpoint", check_llm_endpoint),
     ]
     if not fast:
         checks = [("pytest", check_pytest), ("ruff", check_ruff), *checks]

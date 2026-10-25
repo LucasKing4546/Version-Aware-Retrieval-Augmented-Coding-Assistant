@@ -2,11 +2,13 @@ import sys
 
 import pytest
 
+from snakepp import cache
 from snakepp.evaluation.sandbox import runner
 
 
 @pytest.fixture(autouse=True)
-def _use_this_python(monkeypatch):
+def _use_this_python(monkeypatch, tmp_path):
+    monkeypatch.setattr(cache, "CACHE_DIR", tmp_path / "cache")
     monkeypatch.setenv("SNAKEPP_SANDBOX_PYTHON", sys.executable)
     monkeypatch.setenv("SNAKEPP_SANDBOX", "local")
 
@@ -41,3 +43,9 @@ def test_missing_env_message(monkeypatch, tmp_path):
     monkeypatch.setattr(runner, "DEFAULT_ENV", tmp_path / "none")
     with pytest.raises(RuntimeError, match="make_sandbox_env"):
         runner.sandbox_python()
+
+
+def test_run_cached(tmp_path):
+    program = f"open(r'{tmp_path / 'ran.txt'}', 'a').write('x')"
+    assert runner.run_cached(program).passed and runner.run_cached(program).passed
+    assert (tmp_path / "ran.txt").read_text() == "x"  # second call came from the cache

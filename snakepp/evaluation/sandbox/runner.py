@@ -16,8 +16,10 @@ import subprocess
 import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
+
+from snakepp import cache
 
 DEFAULT_ENV = Path("data/envs/ds1000")
 DEFAULT_IMAGE = "snakepp-sandbox:ds1000"
@@ -78,7 +80,18 @@ def run_program(program: str, timeout: float = 30.0, backend: str | None = None)
     return Outcome(False, error_type(proc.stderr, proc.returncode), proc.stderr[-800:] or None)
 
 
-def run_many(programs: list[str], timeout: float = 30.0, workers: int = 4, backend: str | None = None) -> list[Outcome]:
+def run_cached(program: str, timeout: float = 30.0, backend: str | None = None) -> Outcome:
+    """run_program, cached in data/cache/sandbox by program + timeout + interpreter."""
+    backend = backend or os.environ.get("SNAKEPP_SANDBOX", "local")
+    where = os.environ.get("SNAKEPP_SANDBOX_IMAGE", DEFAULT_IMAGE) if backend == "docker" else sandbox_python()
+    k = cache.key(program, timeout, backend, where)
+    return Outcome(**cache.cached_json("sandbox", k, lambda: asdict(run_program(program, timeout, backend))))
+
+
+def run_many(
+    programs: list[str], timeout: float = 30.0, workers: int = 4, backend: str | None = None, use_cache: bool = True
+) -> list[Outcome]:
     """Run programs in parallel, results in input order."""
+    run = run_cached if use_cache else run_program
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        return list(pool.map(lambda p: run_program(p, timeout, backend), programs))
+        return list(pool.map(lambda p: run(p, timeout, backend), programs))

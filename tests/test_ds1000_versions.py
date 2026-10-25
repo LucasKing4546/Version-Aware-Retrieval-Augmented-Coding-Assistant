@@ -47,8 +47,10 @@ def test_ds1000_tasks_drop_solutions(tmp_path):
 def test_ds1000_evaluate(tmp_path, monkeypatch):
     import sys
 
+    from snakepp import cache
     from snakepp.evaluation.ds1000 import DS1000, clean_code
 
+    monkeypatch.setattr(cache, "CACHE_DIR", tmp_path / "cache")
     monkeypatch.setenv("SNAKEPP_SANDBOX_PYTHON", sys.executable)
     monkeypatch.setenv("SNAKEPP_SANDBOX", "local")
     assert clean_code("```python\nresult = 2 + 2\n```\n</code>") == "result = 2 + 2"

@@ -47,3 +47,9 @@ def test_apidoc_dump_runs_standalone(tmp_path):
     subprocess.run([sys.executable, "-I", str(docs.APIDOC), str(out), "json", "json"], check=True)
     names = {json.loads(line)["qualname"] for line in out.read_text(encoding="utf-8").splitlines()}
     assert {"json.dumps", "json.JSONDecoder", "json.JSONDecoder.decode"} <= names
+
+
+def test_apidoc_dump_skips_missing_modules(tmp_path):
+    out = tmp_path / "api.jsonl"
+    subprocess.run([sys.executable, "-I", str(docs.APIDOC), str(out), "json", "json.nope", "json"], check=True)
+    assert out.exists() and not (tmp_path / "api.jsonl.part").exists()

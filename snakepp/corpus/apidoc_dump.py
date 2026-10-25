@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib
 import inspect
 import json
+import os
 import sys
 import warnings
 
@@ -31,7 +32,11 @@ def _public(names) -> list[str]:
 
 
 def iter_api(module_name: str, root: str):
-    module = importlib.import_module(module_name)
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as e:
+        print(f"skip {module_name}: {e}", file=sys.stderr)
+        return
     names = getattr(module, "__all__", None) or dir(module)
     for name in _public(names):
         obj = getattr(module, name, None)
@@ -49,7 +54,8 @@ def iter_api(module_name: str, root: str):
 def main(out_path: str, root: str, modules: list[str]) -> None:
     warnings.simplefilter("ignore")
     seen = set()
-    with open(out_path, "w", encoding="utf-8") as out:
+    tmp_path = out_path + ".part"
+    with open(tmp_path, "w", encoding="utf-8") as out:
         for module_name in modules:
             for qualname, obj in iter_api(module_name, root):
                 doc = inspect.getdoc(obj)

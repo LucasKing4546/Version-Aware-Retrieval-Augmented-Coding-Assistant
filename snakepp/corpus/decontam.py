@@ -26,6 +26,11 @@ _WORD = re.compile(r"[a-z0-9_]+")
 app = typer.Typer(help="Remove benchmark leaks from the Stack Overflow corpus")
 
 
+@app.callback()
+def _main() -> None:
+    """Keep subcommand names on the command line."""
+
+
 @dataclass(frozen=True)
 class Match:
     task_id: str

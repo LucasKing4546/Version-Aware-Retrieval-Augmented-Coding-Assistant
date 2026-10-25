@@ -32,6 +32,11 @@ MAX_ANSWER_CHARS = 4000
 app = typer.Typer(help="Build Stack Overflow chunks")
 
 
+@app.callback()
+def _main() -> None:
+    """Keep subcommand names on the command line."""
+
+
 def is_watermark(row: Mapping[str, str]) -> bool:
     """True for a Posts.xml row (its XML attributes) that matches a known watermark pattern."""
     post_id = row.get("Id", "")

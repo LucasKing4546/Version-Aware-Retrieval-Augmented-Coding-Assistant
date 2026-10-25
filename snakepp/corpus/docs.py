@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-import sys
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,6 +19,7 @@ import typer
 
 from snakepp.corpus import rst
 from snakepp.corpus.io import CHUNKS_DIR, write_chunks
+from snakepp.evaluation.sandbox import envs
 from snakepp.schemas import Chunk, make_chunk_id
 
 RAW_DIR = Path("data/raw/docs")
@@ -140,14 +140,8 @@ def rst_chunks(library: str, version: str, doc_root: Path, spec: LibrarySpec) ->
 
 
 def ensure_env(library: str, version: str, spec: LibrarySpec, root: Path = ENVS_DIR) -> Path:
-    env = root / f"{library}-{version}"
-    exe = env / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
-    if not exe.exists():
-        uv = [sys.executable, "-m", "uv"]
-        subprocess.run([*uv, "venv", "-q", "--python", "3.10", str(env)], check=True)
-        reqs = [f"{library}=={version}", *filter(None, [spec.extra_requirements.get(version)])]
-        subprocess.run([*uv, "pip", "install", "-q", "--python", str(env), *reqs], check=True)
-    return exe
+    reqs = [f"{library}=={version}", *filter(None, [spec.extra_requirements.get(version)])]
+    return envs.ensure_env(root / f"{library}-{version}", reqs)
 
 
 def api_records(library: str, version: str, spec: LibrarySpec) -> list[dict]:

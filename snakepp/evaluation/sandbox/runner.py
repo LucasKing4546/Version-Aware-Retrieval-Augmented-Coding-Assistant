@@ -52,7 +52,9 @@ def error_type(stderr: str, returncode: int) -> str | None:
     return f"ExitCode{returncode}"
 
 
-def _command(program_path: Path, backend: str) -> list[str]:
+def _command(program_path: Path, backend: str, python: str | None = None) -> list[str]:
+    if python:
+        return [python, "-I", str(program_path)]
     if backend == "docker":
         image = os.environ.get("SNAKEPP_SANDBOX_IMAGE", DEFAULT_IMAGE)
         return ["docker", "run", "--rm", "-i", "--network", "none", "--memory", "2g", "--cpus", "1",
@@ -60,7 +62,8 @@ def _command(program_path: Path, backend: str) -> list[str]:
     return [sandbox_python(), "-I", str(program_path)]
 
 
-def run_program(program: str, timeout: float = 30.0, backend: str | None = None) -> Outcome:
+def run_program(program: str, timeout: float = 30.0, backend: str | None = None, python: str | None = None) -> Outcome:
+    """Run in the sandbox; `python` picks another local interpreter (e.g. a version_set environment)."""
     backend = backend or os.environ.get("SNAKEPP_SANDBOX", "local")
     with tempfile.TemporaryDirectory(prefix="snakepp_") as tmp:
         path = Path(tmp) / "program.py"
@@ -70,7 +73,8 @@ def run_program(program: str, timeout: float = 30.0, backend: str | None = None)
                     "HOME": tmp, "USERPROFILE": tmp, "MPLCONFIGDIR": tmp})  # matplotlib needs a home dir
         try:
             proc = subprocess.run(
-                _command(path, backend), input=program if backend == "docker" else None, cwd=tmp, env=env,
+                _command(path, backend, python), input=None if python or backend != "docker" else program, cwd=tmp,
+                env=env,
                 capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
             )
         except subprocess.TimeoutExpired:
@@ -80,18 +84,21 @@ def run_program(program: str, timeout: float = 30.0, backend: str | None = None)
     return Outcome(False, error_type(proc.stderr, proc.returncode), proc.stderr[-800:] or None)
 
 
-def run_cached(program: str, timeout: float = 30.0, backend: str | None = None) -> Outcome:
+def run_cached(program: str, timeout: float = 30.0, backend: str | None = None, python: str | None = None) -> Outcome:
     """run_program, cached in data/cache/sandbox by program + timeout + interpreter."""
     backend = backend or os.environ.get("SNAKEPP_SANDBOX", "local")
-    where = os.environ.get("SNAKEPP_SANDBOX_IMAGE", DEFAULT_IMAGE) if backend == "docker" else sandbox_python()
+    image = os.environ.get("SNAKEPP_SANDBOX_IMAGE", DEFAULT_IMAGE)
+    where = python or (image if backend == "docker" else sandbox_python())
     k = cache.key(program, timeout, backend, where)
-    return Outcome(**cache.cached_json("sandbox", k, lambda: asdict(run_program(program, timeout, backend))))
+    return Outcome(**cache.cached_json("sandbox", k, lambda: asdict(run_program(program, timeout, backend, python))))
 
 
 def run_many(
-    programs: list[str], timeout: float = 30.0, workers: int = 4, backend: str | None = None, use_cache: bool = True
+    programs: list[str], timeout: float = 30.0, workers: int = 4, backend: str | None = None, use_cache: bool = True,
+    pythons: list[str | None] | None = None,
 ) -> list[Outcome]:
-    """Run programs in parallel, results in input order."""
+    """Run programs in parallel, results in input order. `pythons` optionally sets an interpreter per program."""
     run = run_cached if use_cache else run_program
+    pythons = pythons or [None] * len(programs)
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        return list(pool.map(lambda p: run(p, timeout, backend), programs))
+        return list(pool.map(lambda pp: run(pp[0], timeout, backend, pp[1]), zip(programs, pythons, strict=True)))

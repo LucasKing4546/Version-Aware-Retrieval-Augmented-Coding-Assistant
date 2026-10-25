@@ -1,0 +1,5 @@
+name: c3_dense
+description: "Dense only, docs + SO"
+retrieval:
+  bm25: false
+  rerank: false

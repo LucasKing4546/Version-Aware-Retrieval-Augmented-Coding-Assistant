@@ -1,0 +1,6 @@
+# TODO (Enea, Mon 26 Oct): fill with the exact versions DS-1000's official environment uses
+pandas
+numpy
+matplotlib
+scikit-learn
+scipy

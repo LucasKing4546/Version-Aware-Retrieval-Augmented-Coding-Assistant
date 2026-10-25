@@ -1,0 +1,4 @@
+name: c1_docs
+description: "Hybrid + rerank, docs only"
+retrieval:
+  sources: [docs]

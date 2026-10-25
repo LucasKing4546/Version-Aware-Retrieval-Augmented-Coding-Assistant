@@ -52,3 +52,10 @@ def test_write_results(tmp_path, monkeypatch):
     pipeline.write_results(stem, gens, results, summary)
     assert len(stem.with_suffix(".jsonl").read_text().splitlines()) == 3
     assert '"pass@1": 0.0' in stem.with_suffix(".json").read_text()
+
+
+def test_run_benchmark_parallel_generation(monkeypatch, tmp_path):
+    _fake_llm(monkeypatch, tmp_path, "```python\npd.concat(x)\n```")
+    cfg = Config.model_validate({"name": "c0", "retrieval": {"enabled": False}})
+    gens, _, summary = pipeline.run_benchmark(cfg, FakeBench(), "fake", gen_workers=3)
+    assert [g.task_id for g in gens] == ["t0", "t1", "t2"] and summary["pass@1"] == 1.0

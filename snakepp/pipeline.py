@@ -11,6 +11,7 @@ import collections
 import glob
 import json
 import statistics
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
 
@@ -24,7 +25,7 @@ from snakepp.evaluation.registry import Benchmark, load_benchmark
 from snakepp.generation import llm
 from snakepp.generation.citations import extract_citations, extract_code
 from snakepp.generation.prompts import SYSTEM, build_prompt
-from snakepp.schemas import EvalResult, Generation, Task
+from snakepp.schemas import EvalResult, Generation, Retrieved, Task
 
 RESULTS_DIR = Path("data/results")
 QUERY_CHARS = 2000  # retrieval query = start of the task prompt
@@ -40,8 +41,12 @@ def make_retriever(cfg: Config):
     return Retriever.from_disk(cfg)
 
 
-def generate_one(task: Task, cfg: Config, retriever) -> Generation:
-    hits = retriever.retrieve(task.prompt[:QUERY_CHARS], task.target_versions) if retriever else []
+def retrieve_for(task: Task, retriever) -> list[Retrieved]:
+    return retriever.retrieve(task.prompt[:QUERY_CHARS], task.target_versions) if retriever else []
+
+
+def generate_one(task: Task, cfg: Config, retriever, hits: list[Retrieved] | None = None) -> Generation:
+    hits = retrieve_for(task, retriever) if hits is None else hits
     chunks = [retriever.chunks[h.chunk_id] for h in hits] if retriever else []
     prompt = build_prompt(task, chunks, cfg.generation)
     out = llm.complete(prompt, cfg.generation, SYSTEM)
@@ -82,9 +87,16 @@ def write_results(stem: Path, gens: list[Generation], results: list[EvalResult],
     stem.with_suffix(".json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
 
-def run_benchmark(cfg: Config, bench: Benchmark, name: str, workers: int = 4) -> tuple[list, list, dict]:
+def run_benchmark(
+    cfg: Config, bench: Benchmark, name: str, workers: int = 4, gen_workers: int = 1
+) -> tuple[list, list, dict]:
+    """Retrieval runs sequentially; LLM calls run `gen_workers` at a time (vLLM batches concurrent requests)."""
     retriever = make_retriever(cfg)
-    gens = [generate_one(t, cfg, retriever) for t in tqdm(bench.tasks, desc=f"{cfg.name}/{name}", unit="task")]
+    hits = [retrieve_for(t, retriever) for t in tqdm(bench.tasks, desc=f"retrieve {cfg.name}", unit="task",
+                                                       disable=retriever is None)]
+    with ThreadPoolExecutor(max_workers=gen_workers) as pool:
+        jobs = pool.map(lambda th: generate_one(th[0], cfg, retriever, th[1]), zip(bench.tasks, hits, strict=True))
+        gens = list(tqdm(jobs, total=len(bench.tasks), desc=f"{cfg.name}/{name}", unit="task"))
     results = bench.evaluate({g.task_id: g.code for g in gens}, cfg.name, workers=workers)
     return gens, results, summarize(cfg, name, gens, results)
 
@@ -97,11 +109,11 @@ def _with_overrides(cfg: Config, model: str | None, backend: str | None) -> Conf
 @app.command()
 def run(
     config: str, benchmark: str = "ds1000", limit: int | None = None, model: str | None = None,
-    backend: str | None = None, workers: int = 4,
+    backend: str | None = None, workers: int = 4, gen_workers: int = 1,
 ) -> None:
     """Run one configuration on one benchmark. --model/--backend override the config (e.g. for LM Studio)."""
     cfg = _with_overrides(load_config(config), model, backend)
-    gens, results, summary = run_benchmark(cfg, load_benchmark(benchmark, limit), benchmark, workers)
+    gens, results, summary = run_benchmark(cfg, load_benchmark(benchmark, limit), benchmark, workers, gen_workers)
     stem = result_stem(benchmark, cfg.name)
     write_results(stem, gens, results, summary)
     typer.echo(json.dumps(summary, indent=2))
@@ -111,7 +123,7 @@ def run(
 @app.command()
 def sweep(
     configs: str = "configs/*.yaml", benchmarks: list[str] | None = None, limit: int | None = None,
-    model: str | None = None, backend: str | None = None, force: bool = False,
+    model: str | None = None, backend: str | None = None, force: bool = False, gen_workers: int = 1,
 ) -> None:
     """Run every config on every benchmark, skipping pairs that already have a results file (unless --force)."""
     for path in sorted(glob.glob(configs)):
@@ -120,7 +132,7 @@ def sweep(
             if not force and list((RESULTS_DIR / bench).glob(f"{cfg.name}_[0-9]*.json")):
                 typer.echo(f"skip {cfg.name} on {bench}: results exist")
                 continue
-            run(path, bench, limit, model, backend)
+            run(path, bench, limit, model, backend, gen_workers=gen_workers)
 
 
 if __name__ == "__main__":

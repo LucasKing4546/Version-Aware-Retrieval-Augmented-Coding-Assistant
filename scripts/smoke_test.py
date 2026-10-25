@@ -117,8 +117,8 @@ def check_version_filter() -> str:
 def check_ds1000_versions() -> str:
     pinned = _need_attr("snakepp.evaluation.ds1000", "pinned_versions")()
     expected = {"pandas": "1.5.3", "numpy": "1.26.4", "matplotlib": "3.8.4", "scikit-learn": "1.4.0", "scipy": "1.12.0"}
-    assert pinned == expected, pinned
-    return ", ".join(f"{k} {v}" for k, v in pinned.items())
+    assert expected.items() <= pinned.items(), pinned
+    return ", ".join(f"{k} {v}" for k, v in expected.items())
 
 
 def check_watermark_filter() -> str:

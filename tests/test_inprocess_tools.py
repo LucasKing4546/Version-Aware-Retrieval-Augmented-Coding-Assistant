@@ -162,3 +162,21 @@ def test_from_config_end_to_end_on_the_fake(monkeypatch, chunks_200):
     assert docs and all(h.chunk.source == "docs" for h in docs)
     assert tools.search_stackoverflow("append a row to a DataFrame", "pandas") == []
     assert tools.get_chunk(docs[0].chunk_id) == docs[0].chunk
+
+
+def test_shared_backend_still_fills_top_k(chunks_200):
+    # Docs outrank Stack Overflow on ties in FakeRetriever, so a shared backend's first top_k hits
+    # are mostly docs; the tool must ask again until top_k Stack Overflow hits survive.
+    mixed = SpyRetriever(FakeRetriever(chunks_200))
+    tools = make_tools(chunks_200, retrievers={"docs": mixed, "stackoverflow": mixed})
+    so = tools.search_stackoverflow("pandas dataframe", "pandas", top_k=5)
+    assert len(so) == 5 and all(h.chunk.source == "stackoverflow" for h in so)
+    assert [h.rank for h in so] == [1, 2, 3, 4, 5]
+    assert len(mixed.calls) > 1 and mixed.calls[0][3] == 5
+
+
+def test_refetch_stops_when_the_backend_runs_out(chunks_200):
+    docs_only = SpyRetriever(FakeRetriever(chunks_200, sources=["docs"]))
+    tools = make_tools(chunks_200, retrievers={"docs": docs_only, "stackoverflow": docs_only})
+    assert tools.search_stackoverflow("pandas dataframe", "pandas", top_k=3) == []
+    assert [c[3] for c in docs_only.calls] == [3, 6, 12, 24]  # stops at MAX_FETCH x top_k

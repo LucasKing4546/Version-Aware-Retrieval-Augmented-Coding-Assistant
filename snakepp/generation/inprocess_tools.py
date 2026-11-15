@@ -13,6 +13,8 @@ from typing import Protocol
 from snakepp.config import Config
 from snakepp.schemas import Chunk, Retrieved, RunResult, Source
 
+MAX_FETCH = 8  # with a shared backend, ask for at most this many times top_k hits
+
 
 class SearchBackend(Protocol):
     """Anything with `Retriever.retrieve`'s signature: the real retriever or a fake."""
@@ -101,10 +103,20 @@ class InProcessTools:
             return []
         library = _normalise(library)
         target_versions = {library: version} if version else {}
-        hits = backend.retrieve(query, library, target_versions, top_k)
+        # A backend shared by both sources can fill top_k with the other source's hits, so ask again
+        # for more until top_k survive the filter, the backend runs out, or MAX_FETCH x top_k is reached.
+        # A per-source backend (what from_config builds) is called exactly once.
+        want = top_k
+        while True:
+            hits = backend.retrieve(query, library, target_versions, want)
+            out = self._keep_source(hits, source, top_k)
+            if len(out) == top_k or len(hits) < want or want >= MAX_FETCH * top_k:
+                return out
+            want = min(want * 2, MAX_FETCH * top_k)
 
-        # Every hit carries its chunk (the MCP output includes text and attribution), only this
-        # tool's source survives, and ranks are renumbered from 1 after filtering.
+    def _keep_source(self, hits: list[Retrieved], source: Source, top_k: int) -> list[Retrieved]:
+        """Every hit carries its chunk (the MCP output includes text and attribution), only this
+        tool's source survives, and ranks are renumbered from 1 after filtering."""
         out: list[Retrieved] = []
         for hit in sorted(hits, key=lambda h: h.rank):
             chunk = hit.chunk or self._get_chunk(hit.chunk_id)

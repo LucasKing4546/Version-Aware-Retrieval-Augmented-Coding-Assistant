@@ -10,6 +10,16 @@ Update the **Where I left off** section at the end of every session.
 
 ## Where I left off (15 Nov 2026)
 
+**Task 2: FakeRetriever (due Tue 17 Nov).** Status: done on branch `feat/retrieval-fake-retriever`, not committed yet.
+- `tests/fakes/fake_retriever.py`: `FakeRetriever.from_config(cfg).retrieve(query, library, target_versions, k)` and
+  `get_chunk(id)`. Same signature as the real `Retriever`. It matches query words against the fixture's chunks.
+  Ties go to the target major version, then docs over Stack Overflow, then id. No rerank and no version filter.
+  It honours `cfg.retrieval.sources`, and mode `none` returns nothing.
+- `tests/test_fake_retriever.py`: 9 tests. The full suite has 48 passing; `ruff check .` is clean.
+- `pyproject.toml`: added `pythonpath = ["."]` so tests can `from tests.fakes... import`.
+- [ ] Commit, push, open a PR and tell Enea how to use it (the snippet is in the module docstring).
+- Next: Week 8, real BM25 (identifier-aware tokenizer) + bge-small/FAISS + RRF in `snakepp/retrieval/`.
+
 **Task 1: Contracts PR (due Mon 16 Nov, merge the same evening).** Status: pushed to `origin/Kevin`; PR #48 merged into main on 15 Nov; old `test/` prototype removed (still in history at 1b3519d). The CI workflow was removed on 15 Nov (it failed on lint errors
 in the old `test/` folder). There is no CI now, so run pytest and ruff locally before pushing. Tell the team at the
 meeting, because the plan's repo rules ask for CI.

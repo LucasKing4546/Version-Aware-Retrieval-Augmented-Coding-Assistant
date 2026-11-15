@@ -10,10 +10,12 @@ from snakepp.ingest.chunks import load_chunks
 from snakepp.retrieval.bm25 import BM25Index
 from snakepp.retrieval.dense import DenseIndex, embed_cached
 from snakepp.retrieval.fusion import rrf
+from snakepp.retrieval.rerank import Reranker
 from snakepp.retrieval.retriever import Retriever
 from snakepp.retrieval.tokenizer import tokenize
 from snakepp.schemas import Chunk
 from tests.fakes.fake_encoder import HashingEncoder
+from tests.fakes.fake_reranker import OverlapScorer
 
 FIXTURE = Path(__file__).parent / "fixtures" / "fixture_chunks.jsonl"
 
@@ -23,12 +25,19 @@ def real_chunks() -> list[Chunk]:
     return list(load_chunks(FIXTURE))
 
 
-def cfg(mode: str = "hybrid", **retrieval) -> Config:
-    return Config(name=f"t_{mode}", retrieval=RetrievalConfig(mode=mode, rerank=False, **retrieval))
+def cfg(mode: str = "hybrid", rerank: bool = False, **retrieval) -> Config:
+    return Config(name=f"t_{mode}", retrieval=RetrievalConfig(mode=mode, rerank=rerank, **retrieval))
 
 
-def make(chunks, mode="hybrid", tmp_path=None, encoder=None, **retrieval) -> Retriever:
-    return Retriever(chunks, cfg(mode, **retrieval), encode=encoder or HashingEncoder(), cache_dir=tmp_path)
+def make(chunks, mode="hybrid", tmp_path=None, encoder=None, rerank=False, scorer=None, **retrieval) -> Retriever:
+    return Retriever(
+        chunks,
+        cfg(mode, rerank, **retrieval),
+        encode=encoder or HashingEncoder(),
+        rerank_score=scorer or OverlapScorer(),
+        cache_dir=tmp_path,
+        rerank_cache_dir=tmp_path,
+    )
 
 
 # ---- tokenizer -------------------------------------------------------------------------------------------
@@ -91,6 +100,29 @@ def test_embedding_cache_encodes_each_text_once(real_chunks, tmp_path):
     assert list(tmp_path.glob("*.npz")) == [tmp_path / "fake_model.npz"]
 
 
+# ---- rerank ----------------------------------------------------------------------------------------------
+
+
+def test_reranker_sorts_by_score_and_caches(real_chunks, tmp_path):
+    scorer = OverlapScorer()
+    reranker = Reranker(scorer, "fake/ce", cache_dir=tmp_path)
+    hits = reranker.rerank("DataFrame.iteritems", real_chunks[:30])
+    assert len(hits) == 30 and [s for _, s in hits] == sorted((s for _, s in hits), reverse=True)
+    assert Reranker(scorer, "fake/ce", cache_dir=tmp_path).rerank("DataFrame.iteritems", real_chunks[:30]) == hits
+    assert scorer.scored == 30  # the second reranker read every score from the cache file
+
+
+@pytest.mark.parametrize("mode", ["bm25", "dense", "hybrid"])
+def test_rerank_is_the_last_stage(real_chunks, tmp_path, mode):
+    r = make(real_chunks, mode, tmp_path, rerank=True, candidates=20)
+    lists = r.stage_lists("DataFrame.iteritems", "pandas", n=20)
+    assert list(lists)[-1] == "reranked" and len(lists["reranked"]) == 20
+    previous = [name for name in lists if name != "reranked"][-1]
+    assert {cid for cid, _ in lists["reranked"]} == {cid for cid, _ in lists[previous][:20]}
+    hits = r.retrieve("DataFrame.iteritems", "pandas", {}, k=3)
+    assert [h.stage for h in hits] == ["reranked"] * 3 and [h.rank for h in hits] == [1, 2, 3]
+
+
 # ---- Retriever -------------------------------------------------------------------------------------------
 
 
@@ -129,7 +161,6 @@ def test_get_chunk(real_chunks, tmp_path):
 @pytest.mark.parametrize(
     "config",
     [
-        Config(name="rerank"),
         Config(name="vf", retrieval=RetrievalConfig(rerank=False), version_filter=VersionFilterConfig(mode="soft")),
         Config(name="leaky", retrieval=RetrievalConfig(rerank=False, corpus="leaky")),
     ],
@@ -139,14 +170,14 @@ def test_week9_features_fail_loudly(real_chunks, config):
         Retriever(real_chunks, config)
 
 
-def test_week8_configs_are_supported():
-    for name in ("c0_none", "c3_dense", "c4_hybrid"):
+def test_supported_configs():
+    for name in ("c0_none", "c1_docs", "c2_so", "c3_dense", "c4_hybrid", "c5_full"):
         Retriever([], load_config(name))  # no chunks: builds nothing, but the config is accepted
 
 
 @pytest.mark.skipif(not os.environ.get("SNAKEPP_SLOW"), reason="set SNAKEPP_SLOW=1 to run with the real bge-small")
 def test_real_embedder_end_to_end(real_chunks, tmp_path):
-    r = Retriever(real_chunks, cfg("hybrid"), cache_dir=tmp_path)
+    r = Retriever(real_chunks, cfg("hybrid", rerank=True), cache_dir=tmp_path, rerank_cache_dir=tmp_path)
     hits = r.retrieve("How do I append a row to a DataFrame?", "pandas", {"pandas": "2.2.3"}, k=5)
     # Stack Overflow urls carry only a question id, so check the text: every top-5 hit should be on topic.
     assert all("append" in h.chunk.text.lower() or "concat" in h.chunk.text.lower() for h in hits)

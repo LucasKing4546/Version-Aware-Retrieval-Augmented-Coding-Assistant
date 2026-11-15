@@ -1,4 +1,0 @@
-name: c4_hybrid
-description: "BM25 + dense fused, no rerank"
-retrieval:
-  rerank: false

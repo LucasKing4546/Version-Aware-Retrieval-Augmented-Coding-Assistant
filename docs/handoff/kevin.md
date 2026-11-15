@@ -10,7 +10,7 @@ Update the **Where I left off** section at the end of every session.
 
 ## Where I left off (15 Nov 2026)
 
-**Task 1: Contracts PR (due Mon 16 Nov, merge the same evening).** Status: pushed to `origin/Kevin`; PR #48 is open. The CI workflow was removed on 15 Nov (it failed on lint errors
+**Task 1: Contracts PR (due Mon 16 Nov, merge the same evening).** Status: pushed to `origin/Kevin`; PR #48 merged into main on 15 Nov; old `test/` prototype removed (still in history at 1b3519d). The CI workflow was removed on 15 Nov (it failed on lint errors
 in the old `test/` folder). There is no CI now, so run pytest and ruff locally before pushing. Tell the team at the
 meeting, because the plan's repo rules ask for CI.
 
@@ -31,7 +31,7 @@ Done:
 - [x] Tests: `tests/test_contracts.py` and the existing fixture tests. 39 pass; `ruff check snakepp tests scripts` is clean.
 
 To do before or at the contract meeting:
-- [ ] **Delete the old `test/` folder** (the old prototype). The useful files were already moved to the root. The old code
+- [x] **Delete the old `test/` folder** (the old prototype). The useful files were already moved to the root. The old code
       is still in git history: `git show 1b3519d:test/snakepp/retrieval/bm25.py` (also dense.py, fusion.py, rerank.py,
       version_filter.py). These are a good starting point for BM25, dense and RRF.
 - [ ] Confirm the **DS-1000 pins** in `configs/pins.yaml` (marked TODO) against DS-1000's official environment.

@@ -1,4 +1,0 @@
-name: c0_none
-description: "No retrieval baseline"
-retrieval:
-  enabled: false

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from snakepp.config import Config, RetrievalConfig, VersionFilterConfig, load_config
+from snakepp.config import Config, RetrievalConfig, load_config
 from snakepp.ingest.chunks import load_chunks
 from snakepp.retrieval.bm25 import BM25Index
 from snakepp.retrieval.dense import DenseIndex, embed_cached
@@ -158,20 +158,14 @@ def test_get_chunk(real_chunks, tmp_path):
         r.get_chunk("missing")
 
 
-@pytest.mark.parametrize(
-    "config",
-    [
-        Config(name="vf", retrieval=RetrievalConfig(rerank=False), version_filter=VersionFilterConfig(mode="soft")),
-        Config(name="leaky", retrieval=RetrievalConfig(rerank=False, corpus="leaky")),
-    ],
-)
-def test_week9_features_fail_loudly(real_chunks, config):
-    with pytest.raises(NotImplementedError, match="Week 9"):
-        Retriever(real_chunks, config)
+def test_leaky_corpus_fails_loudly(real_chunks):
+    with pytest.raises(NotImplementedError, match="not built yet"):
+        Retriever(real_chunks, Config(name="leaky", retrieval=RetrievalConfig(rerank=False, corpus="leaky")))
 
 
 def test_supported_configs():
-    for name in ("c0_none", "c1_docs", "c2_so", "c3_dense", "c4_hybrid", "c5_full"):
+    names = ["c0_none", "c1_docs", "c2_so", "c3_dense", "c4_hybrid", "c5_full", "c5_hard"]
+    for name in names + ["c5_soft_01", "c5_soft_03", "c5_soft_05"]:
         Retriever([], load_config(name))  # no chunks: builds nothing, but the config is accepted
 
 

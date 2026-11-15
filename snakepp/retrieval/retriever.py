@@ -1,8 +1,7 @@
 """Hybrid retriever: BM25 + dense -> RRF -> rerank -> version filter. Owner: Kevin.
 
-Status: modes bm25, dense and hybrid (RRF), plus the cross-encoder reranker. The version filter and the leaky
-Stack Overflow corpus are still to come; a config that asks for them fails loudly instead of silently running
-without them.
+Status: modes bm25, dense and hybrid (RRF), the cross-encoder reranker and the soft/hard version filter. The leaky
+Stack Overflow corpus is still to come; a config that asks for it fails loudly instead of silently running without it.
 """
 
 from __future__ import annotations
@@ -14,6 +13,7 @@ from pathlib import Path
 from snakepp import paths
 from snakepp.config import Config
 from snakepp.ingest.chunks import load_chunks
+from snakepp.retrieval import version_filter
 from snakepp.retrieval.bm25 import BM25Index, Hits
 from snakepp.retrieval.dense import EMBED_CACHE, DenseIndex, Encoder, load_encoder
 from snakepp.retrieval.fusion import rrf
@@ -26,12 +26,10 @@ def _check_supported(cfg: Config) -> None:
     if rc.mode == "none":
         return
     todo = []
-    if cfg.version_filter.mode != "off":
-        todo.append(f"version_filter.mode: {cfg.version_filter.mode}")
     if rc.corpus != "clean":
         todo.append("retrieval.corpus: leaky (needs Lucas's decontaminator)")
     if todo:
-        raise NotImplementedError(f"config {cfg.name!r} needs Week 9 retrieval features: " + "; ".join(todo))
+        raise NotImplementedError(f"config {cfg.name!r} needs retrieval features not built yet: " + "; ".join(todo))
 
 
 def chunk_files(cfg: Config, root: Path = paths.CHUNKS) -> list[Path]:
@@ -86,16 +84,19 @@ class Retriever:
         return lists
 
     def retrieve(self, query: str, library: str | None, target_versions: dict[str, str], k: int) -> list[Retrieved]:
-        """Top-k hits, best first, rank from 1, `chunk` filled. target_versions is used once the filter lands."""
+        """Top-k hits, best first, rank from 1, `chunk` filled; the version filter runs on the final list."""
         if not self._chunks or k < 1:
             return []
         lists = self.stage_lists(query, library, max(k, self.cfg.retrieval.candidates))
         if not lists:
             return []
         stage: Stage = list(lists)[-1]  # the last stage that ran: reranked > fused > the single stage
+        final = lists[stage]
+        if self.cfg.version_filter.mode != "off":
+            final, _ = version_filter.apply(final, self._chunks, target_versions, self.cfg.version_filter)
         return [
             Retrieved(chunk_id=cid, rank=i, score=score, stage=stage, chunk=self._chunks[cid])
-            for i, (cid, score) in enumerate(lists[stage][:k], start=1)
+            for i, (cid, score) in enumerate(final[:k], start=1)
         ]
 
     def get_chunk(self, chunk_id: str) -> Chunk:

@@ -113,6 +113,8 @@ def test_install_replaces_the_module_function(monkeypatch):
     assert fake.calls == [MSGS]
 
 
-def test_real_stub_is_restored_after_install():
-    with pytest.raises(NotImplementedError):
-        llm.complete(MSGS, CFG)
+REAL_COMPLETE = llm.complete
+
+
+def test_real_function_is_restored_after_install():
+    assert llm.complete is REAL_COMPLETE

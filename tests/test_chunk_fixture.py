@@ -5,7 +5,6 @@ from pathlib import Path
 import pandas as pd
 from conftest import load_chunks
 
-from snakepp.retrieval.version_filter import compatible
 from snakepp.schemas import Chunk
 
 
@@ -40,11 +39,9 @@ def test_stackoverflow_chunks_keep_attribution(chunks_200):
     assert any(c.version is None for c in so) and any(c.version_inferred for c in so)
 
 
-def test_fixture_exercises_version_filter(chunks_200):
-    target = {"pandas": "2.2.2"}
+def test_fixture_has_the_version_trap(chunks_200):
     pandas_docs = [c for c in chunks_200 if c.library == "pandas" and c.source == "docs"]
-    assert any(compatible(c, target) for c in pandas_docs)
-    assert any(not compatible(c, target) for c in pandas_docs)
+    assert {c.version.split(".")[0] for c in pandas_docs} == {"1", "2"}
     assert any("DataFrame.append" in c.text and c.version == "1.5.3" for c in pandas_docs)
 
 

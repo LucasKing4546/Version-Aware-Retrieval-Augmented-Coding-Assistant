@@ -1,0 +1,14 @@
+# Every contract key spelled out; the other configs only override what differs from the defaults.
+name: c5_full
+description: Hybrid + rerank, docs + Stack Overflow, no version filter
+retrieval:
+  mode: hybrid            # none | bm25 | dense | hybrid
+  sources: [docs, stackoverflow]
+  k: 5
+  rerank: true
+  corpus: clean           # clean | leaky (Stack Overflow variant)
+version_filter:
+  mode: "off"             # off | soft | hard (quoted: bare off is a YAML boolean)
+  penalty: 0.3            # soft mode score multiplier
+generation:
+  model: Qwen/Qwen2.5-Coder-7B-Instruct

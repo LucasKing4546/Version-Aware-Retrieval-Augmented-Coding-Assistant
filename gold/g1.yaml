@@ -1,0 +1,13 @@
+# G1: version-sensitive code tasks. Owner: Roberto. Schema: snakepp.schemas.G1Item.
+# Gold chunks are keyed by url + heading_path, never by chunk id.
+# Example:
+# - task_id: g1-pandas-append
+#   question: Append a row to a DataFrame.
+#   library: pandas
+#   target_version: "2.2.2"
+#   other_version: "1.5.3"
+#   gold_chunks:
+#     - url: https://pandas.pydata.org/pandas-docs/version/2.2.2/reference/api/pandas.concat.html
+#       heading_path: pandas.concat
+#   split: dev
+[]

@@ -1,0 +1,6 @@
+# G3: expected agent decisions. Owner: Roberto. Schema: snakepp.schemas.G3Item.
+# - task_id: g1-pandas-append
+#   needs_retrieval: true
+#   target_versions: {pandas: "2.2.2"}
+#   source: docs
+[]

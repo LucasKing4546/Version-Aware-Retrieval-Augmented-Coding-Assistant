@@ -1,0 +1,4 @@
+name: c5_leaky
+description: Full system on the leaky Stack Overflow index (contamination check, E6)
+retrieval:
+  corpus: leaky

@@ -11,19 +11,14 @@ dependencies = [
   "pydantic>=2.5",
   "pyyaml>=6.0",
   "typer>=0.12",
-  "packaging>=23.0",
   "pandas>=2.0",
   "pyarrow>=14.0",
-  "lxml>=5.0",
-  "docutils>=0.20",
-  "rank-bm25>=0.2.2",
-  "datasketch>=1.6",
-  "tqdm>=4.66",
   "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
-retrieval = ["sentence-transformers>=2.7", "faiss-cpu>=1.8"]
+ingest = ["lxml>=5.0", "docutils>=0.20", "datasketch>=1.6", "packaging>=23.0", "tqdm>=4.66"]
+retrieval = ["rank-bm25>=0.2.2", "sentence-transformers>=2.7", "faiss-cpu>=1.8", "mcp>=1.0"]
 gen = ["openai>=1.30", "anthropic>=0.30"]
 demo = ["gradio>=4.0"]
 analysis = ["matplotlib>=3.8", "jupyter>=1.0", "scipy>=1.11"]

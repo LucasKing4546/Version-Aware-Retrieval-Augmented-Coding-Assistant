@@ -1,0 +1,5 @@
+name: c3_dense
+description: Dense only, docs + Stack Overflow
+retrieval:
+  mode: dense
+  rerank: false

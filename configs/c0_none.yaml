@@ -1,0 +1,5 @@
+name: c0_none
+description: No retrieval baseline
+retrieval:
+  mode: none
+  sources: []

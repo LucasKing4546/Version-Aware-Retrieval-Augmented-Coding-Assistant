@@ -1,0 +1,5 @@
+name: c4_hybrid
+description: BM25 + dense fused with RRF, no rerank
+retrieval:
+  mode: hybrid
+  rerank: false

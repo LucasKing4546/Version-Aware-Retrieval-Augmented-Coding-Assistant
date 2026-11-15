@@ -1,0 +1,4 @@
+name: c5_hard
+description: Full system + hard version filter (drop incompatible chunks)
+version_filter:
+  mode: hard

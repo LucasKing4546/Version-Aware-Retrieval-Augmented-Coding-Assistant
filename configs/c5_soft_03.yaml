@@ -1,0 +1,5 @@
+name: c5_soft_03
+description: Full system + soft version filter, penalty 0.3
+version_filter:
+  mode: soft
+  penalty: 0.3

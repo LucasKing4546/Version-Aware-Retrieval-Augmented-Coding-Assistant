@@ -21,7 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ingest = ["lxml>=5.0", "docutils>=0.20", "datasketch>=1.6", "packaging>=23.0", "tqdm>=4.66"]
-retrieval = ["sentence-transformers>=2.7", "mcp>=1.0"]  # the real embedder and reranker models
+retrieval = ["sentence-transformers>=2.7", "mcp>=2.3"]  # real embedder/reranker models; MCP server
 gen = ["openai>=1.30", "anthropic>=0.30"]
 demo = ["gradio>=4.0"]
 analysis = ["matplotlib>=3.8", "jupyter>=1.0", "scipy>=1.11"]

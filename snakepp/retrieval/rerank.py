@@ -30,7 +30,7 @@ def load_cross_encoder(model_name: str) -> Scorer:
     model = CrossEncoder(model_name)
 
     def score(query: str, passages: list[str]) -> list[float]:
-        return [float(s) for s in model.predict([(query, p) for p in passages], batch_size=16)]
+        return [float(s) for s in model.predict([(query, p) for p in passages], batch_size=16, show_progress_bar=False)]
 
     return score
 

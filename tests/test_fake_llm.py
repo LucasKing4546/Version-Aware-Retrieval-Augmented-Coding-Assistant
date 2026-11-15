@@ -5,11 +5,11 @@ from __future__ import annotations
 import inspect
 
 import pytest
-from fakes.fake_llm import FakeLLM, UnrecordedCall
 
 from snakepp.config import GenerationConfig
 from snakepp.generation import llm
 from snakepp.generation.llm import LLMRecord, cache_key
+from tests.fakes.fake_llm import FakeLLM, UnrecordedCall
 
 CFG = GenerationConfig()
 MSGS = [

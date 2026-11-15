@@ -32,7 +32,9 @@ def load_encoder(model_name: str) -> Encoder:
     model = SentenceTransformer(model_name)
 
     def encode(texts: list[str]) -> np.ndarray:
-        vecs = model.encode(texts, batch_size=32, normalize_embeddings=True, convert_to_numpy=True)
+        vecs = model.encode(
+            texts, batch_size=32, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False
+        )
         return np.asarray(vecs, dtype="float32")
 
     return encode

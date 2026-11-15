@@ -10,7 +10,7 @@ Update the **Where I left off** section at the end of every session.
 
 ## Where I left off (15 Nov 2026)
 
-**Task 1: Contracts PR (due Mon 16 Nov, merge the same evening).** Status: drafted on branch `Kevin` and not committed yet.
+**Task 1: Contracts PR (due Mon 16 Nov, merge the same evening).** Status: committed (`cea7b1f`) and pushed to `origin/Kevin`. The PR is not open yet.
 
 Done:
 - [x] `snakepp/schemas.py`: Chunk, Retrieved, Task, Generation, EvalResult, plus the new **RunResult**, plus gold types

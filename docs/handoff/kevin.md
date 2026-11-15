@@ -10,7 +10,9 @@ Update the **Where I left off** section at the end of every session.
 
 ## Where I left off (15 Nov 2026)
 
-**Task 1: Contracts PR (due Mon 16 Nov, merge the same evening).** Status: committed (`cea7b1f`) and pushed to `origin/Kevin`. The PR is not open yet.
+**Task 1: Contracts PR (due Mon 16 Nov, merge the same evening).** Status: pushed to `origin/Kevin`; PR #48 is open. The CI workflow was removed on 15 Nov (it failed on lint errors
+in the old `test/` folder). There is no CI now, so run pytest and ruff locally before pushing. Tell the team at the
+meeting, because the plan's repo rules ask for CI.
 
 Done:
 - [x] `snakepp/schemas.py`: Chunk, Retrieved, Task, Generation, EvalResult, plus the new **RunResult**, plus gold types

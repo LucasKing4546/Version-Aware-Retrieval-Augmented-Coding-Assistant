@@ -22,7 +22,7 @@ Dolha Roberto (benchmarks, analysis, demo, report). Design: `ARCHITECTURE.md`; s
 - Final result files in `data/results/` are never overwritten; add a date suffix.
 
 ## Workflow
-- Branch per task: `feat/<lane>-<short-name>`. Small PRs (under ~400 lines). CI must be green.
+- Branch per task: `feat/<lane>-<short-name>`. Small PRs (under ~400 lines). No CI: run `pytest -q` and `ruff check snakepp tests scripts` locally before pushing.
 - Contract stubs raise `NotImplementedError("<owner>: ...")`. Each lane writes only in its own modules:
   `snakepp/ingest` Lucas · `snakepp/retrieval` (+ MCP server, demo) Kevin · `snakepp/generation` Enea · `snakepp/evaluation` Roberto.
 - Changing `schemas.py`, a stub signature, `configs/pins.yaml` or `snakepp/paths.py` needs an issue all four approve.

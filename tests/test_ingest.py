@@ -1,6 +1,7 @@
 import json
 import zlib
 from datetime import date
+from pathlib import Path
 
 import pytest
 
@@ -162,3 +163,41 @@ def test_load_and_write_chunks_roundtrip(tmp_path, chunks_200):
     jsonl.write_text("\n".join(c.model_dump_json() for c in chunks_200[:5]) + "\n\n", encoding="utf-8")
     assert list(load_chunks([jsonl, p2])) == chunks_200[:5] + docs_only
 
+
+def test_so_qa_chunk_and_dedupe(tmp_path):
+    from snakepp.ingest.so_parse import iter_qa, qa_chunk
+
+    q = {"question_id": 7, "accepted_answer_id": 70, "title": "Can&#39;t append", "body": "<p>How?</p>"}
+    a = {
+        "answer_id": 70, "creation_date": 1675209600, "score": 12, "content_license": "CC BY-SA 4.0",  # 2023-02-01
+        "owner": {"display_name": "J&amp;K"},
+        "body": "<p>Use <code>concat</code>:</p><pre><code>pd.concat([df, row])\n</code></pre>",
+    }  # fmt: skip
+    (tmp_path / "100.json").write_text(json.dumps({"questions": [q], "answers": [a]}))
+    (tmp_path / "200.json").write_text(json.dumps({"questions": [q], "answers": [a]}))  # inclusive-cursor repeat
+    (tmp_path / "state.json").write_text("{}")
+    pairs = list(iter_qa(tmp_path))
+    assert len(pairs) == 1
+
+    c = qa_chunk(*pairs[0], "pandas", {"1.5.3": "2023-01-19", "2.0.0": "2023-04-03"})
+    assert (c.version, c.version_inferred, c.created) == ("1.5.3", True, date(2023, 2, 1))
+    assert (c.title, c.author, c.score, c.license) == ("Can't append", "J&K", 12, "CC BY-SA 4.0")
+    assert c.url == "https://stackoverflow.com/questions/7" and c.source == "stackoverflow"
+    assert c.text == (
+        "Can't append\n\nQuestion:\nHow?\n\nAccepted answer:\nUse concat:\n\n```\npd.concat([df, row])\n```"
+    )
+
+
+def test_real_fixture_has_the_version_trap():
+    from snakepp.ingest.chunks import load_chunks
+
+    chunks = list(load_chunks(Path(__file__).parent / "fixtures" / "fixture_chunks.jsonl"))
+    assert 150 <= len(chunks) <= 250 and len({c.id for c in chunks}) == len(chunks)
+    docs = [c for c in chunks if c.source == "docs"]
+    assert {c.version for c in docs} == {"1.5.3", "2.2.3"} and all(c.heading_path for c in docs)
+    append = {c.version for c in docs if c.url.endswith("/pandas.DataFrame.append.html")}
+    assert append == {"1.5.3"}  # removed in 2.0: no page in the 2.2.3 docs
+    assert any(c.url.endswith("/pandas.DataFrame.map.html") for c in docs if c.version == "2.2.3")
+    so = [c for c in chunks if c.source == "stackoverflow"]
+    assert len(so) >= 10 and all(c.version_inferred and c.author and c.created for c in so)
+    assert any(".append(" in c.text for c in so)

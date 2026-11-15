@@ -98,6 +98,15 @@ def _prepare(root) -> None:
         el.tail = " " + (el.tail or "")
 
 
+def html_blocks(html: str) -> list[tuple[str, str]]:
+    """Blocks of an HTML fragment (e.g. a Stack Overflow post body), same rules as docs sections."""
+    root = lxml.html.fragment_fromstring(html, create_parent="div")
+    _prepare(root)
+    out: list[tuple[str, str]] = []
+    _blocks(root, out)
+    return out
+
+
 def parse_page(html: bytes | str) -> list[Section]:
     """Split a built Sphinx (pydata theme) page into heading-scoped sections, in document order."""
     root = lxml.html.fromstring(html)

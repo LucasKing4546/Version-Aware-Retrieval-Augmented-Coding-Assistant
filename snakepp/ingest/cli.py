@@ -14,8 +14,12 @@ from datetime import date
 
 import typer
 
+from snakepp.ingest import docs as docs_source
 from snakepp.ingest import pypi as pypi_source
 from snakepp.ingest import so_fetch
+from snakepp.ingest.chunker import chunk_docs
+from snakepp.ingest.chunks import write_chunks
+from snakepp.paths import chunk_path
 
 app = typer.Typer(help="Ingest a source into versioned chunk parquet files.")
 
@@ -23,7 +27,11 @@ app = typer.Typer(help="Ingest a source into versioned chunk parquet files.")
 @app.command()
 def docs(library: str = typer.Option(...), version: str = typer.Option(...)) -> None:
     """Parse and chunk one library's docs at one pinned version."""
-    raise NotImplementedError("Lucas: docs parser + heading-aware chunker (Week 8)")
+    docs_source.fetch_pages(library, version)
+    chunks = chunk_docs(library, version)
+    out = write_chunks(chunks, chunk_path("docs", library, version))
+    typer.echo(f"{library} {version}: {len(chunks)} chunks -> {out}")
+    # TODO(Lucas, Week 9): rewrite data/manifest.json.
 
 
 @app.command()
